@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2011 Michael Dvorkin
+# Copyright (c) 2010-2013 Michael Dvorkin
 #
 # Awesome Print is freely distributable under the terms of MIT license.
 # See LICENSE file or http://www.opensource.org/licenses/mit-license.php
@@ -20,7 +20,7 @@ module AwesomePrint
           cast = :mongoid_class
         elsif object.class.ancestors.include?(::Mongoid::Document)
           cast = :mongoid_document
-        elsif object.is_a?(::BSON::ObjectId)
+        elsif (defined?(::BSON) && object.is_a?(::BSON::ObjectId)) || (defined?(::Moped) && defined?(::Moped::BSON) && object.is_a?(::Moped::BSON::ObjectId))
           cast = :mongoid_bson_id
         end
       end
@@ -44,7 +44,7 @@ module AwesomePrint
     def awesome_mongoid_document(object)
       return object.inspect if !defined?(::ActiveSupport::OrderedHash)
 
-      data = object.attributes.sort_by { |key| key }.inject(::ActiveSupport::OrderedHash.new) do |hash, c|
+      data = (object.attributes || {}).sort_by { |key| key }.inject(::ActiveSupport::OrderedHash.new) do |hash, c|
         hash[c[0].to_sym] = c[1]
         hash
       end

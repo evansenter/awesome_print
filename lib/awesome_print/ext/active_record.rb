@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2011 Michael Dvorkin
+# Copyright (c) 2010-2013 Michael Dvorkin
 #
 # Awesome Print is freely distributable under the terms of MIT license.
 # See LICENSE file or http://www.opensource.org/licenses/mit-license.php
@@ -21,6 +21,8 @@ module AwesomePrint
         cast = :active_record_instance
       elsif object.is_a?(Class) && object.ancestors.include?(::ActiveRecord::Base)
         cast = :active_record_class
+      elsif type == :activerecord_relation
+        cast = :array
       end
       cast
     end
@@ -41,7 +43,10 @@ module AwesomePrint
       return awesome_object(object) if @options[:raw]
 
       data = object.class.column_names.inject(::ActiveSupport::OrderedHash.new) do |hash, name|
-        hash[name.to_sym] = object.send(name) if object.has_attribute?(name) || object.new_record?
+        if object.has_attribute?(name) || object.new_record?
+          value = object.respond_to?(name) ? object.send(name) : object.read_attribute(name)
+          hash[name.to_sym] = value
+        end
         hash
       end
       "#{object} " << awesome_hash(data)

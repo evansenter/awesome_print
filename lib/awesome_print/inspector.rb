@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2011 Michael Dvorkin
+# Copyright (c) 2010-2013 Michael Dvorkin
 #
 # Awesome Print is freely distributable under the terms of MIT license.
 # See LICENSE file or http://www.opensource.org/licenses/mit-license.php
@@ -14,6 +14,37 @@ module AwesomePrint
     def force_colors!(value = true)
       @force_colors = value
     end
+
+    def console?
+      !!(defined?(IRB) || defined?(Pry))
+    end
+
+    def rails_console?
+      console? && !!(defined?(Rails::Console) || ENV["RAILS_ENV"])
+    end
+
+    def irb!
+      return unless defined?(IRB)
+      unless IRB.version.include?("DietRB")
+        IRB::Irb.class_eval do
+          def output_value
+            ap @context.last_value
+          end
+        end
+      else # MacRuby
+        IRB.formatter = Class.new(IRB::Formatter) do
+          def inspect_object(object)
+            object.ai
+          end
+        end.new
+      end
+    end
+
+    def pry!
+      if defined?(Pry)
+        Pry.print = proc { |output, value| output.puts value.ai }
+      end
+    end
   end
 
   class Inspector
@@ -28,6 +59,7 @@ module AwesomePrint
         :html       => false,  # Use ANSI color codes rather than HTML.
         :multiline  => true,   # Display in multiple lines.
         :plain      => false,  # Use colors.
+        :raw        => false,  # Do not recursively format object instance variables.
         :sort_keys  => false,  # Do not sort hash keys.
         :limit      => false,  # Limit large output for arrays and hashes. Set to a boolean or integer.
         :color => { 
@@ -130,10 +162,8 @@ module AwesomePrint
     #------------------------------------------------------------------------------
     def merge_custom_defaults!
       dotfile = File.join(ENV["HOME"], ".aprc")
-      if File.readable?(dotfile)
-        load dotfile
-        merge_options!(AwesomePrint.defaults)
-      end
+      load dotfile if File.readable?(dotfile)
+      merge_options!(AwesomePrint.defaults) if AwesomePrint.defaults.is_a?(Hash)
     rescue => e
       $stderr.puts "Could not load #{dotfile}: #{e}"
     end

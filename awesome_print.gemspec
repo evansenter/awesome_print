@@ -1,22 +1,13 @@
-# Copyright (c) 2010-2011 Michael Dvorkin
+# Copyright (c) 2010-2013 Michael Dvorkin
 #
 # Awesome Print is freely distributable under the terms of MIT license.
 # See LICENSE file or http://www.opensource.org/licenses/mit-license.php
 #------------------------------------------------------------------------------
 require "rake"
-require File.dirname(__FILE__) + "/lib/awesome_print/version"
-
-task :default => :spec
-
-desc "Run all awesome_print gem specs"
-task :spec do
-  # Run plain rspec command without RSpec::Core::RakeTask overrides.
-  exec "rspec -c spec"
-end
 
 Gem::Specification.new do |s|
   s.name        = "awesome_print"
-  s.version     = AwesomePrint.version
+  s.version     = "1.2.0"
 # s.platform    = Gem::Platform::RUBY
   s.authors     = "Michael Dvorkin"
   s.date        = Time.now.strftime("%Y-%m-%d")
@@ -24,11 +15,11 @@ Gem::Specification.new do |s|
   s.homepage    = "http://github.com/michaeldv/awesome_print"
   s.summary     = "Pretty print Ruby objects with proper indentation and colors"
   s.description = "Great Ruby dubugging companion: pretty print Ruby objects to visualize their structure. Supports custom object formatting via plugins"
-
+  s.license     = "MIT"
   s.rubyforge_project = "awesome_print"
 
-  s.files         = Rake::FileList["[A-Z]*", "lib/**/*.rb", "spec/*", ".gitignore"]
-  s.test_files    = Rake::FileList["spec/*"]
+  s.files         = Dir["[A-Z]*[^~]"] + Dir["lib/**/*.rb"] + Dir["spec/*"] + [".gitignore"]
+  s.test_files    = Dir["spec/*"]
   s.executables   = []
   s.require_paths = ["lib"]
 

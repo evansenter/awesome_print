@@ -1,6 +1,7 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require "bigdecimal"
 require "rational"
+require "set"
 
 describe "AwesomePrint" do
   before do
@@ -486,7 +487,17 @@ EOS
 
     it "should present Rational object with arbitrary precision" do
       rat = Rational(201020102010201020102010201020102010, 2)
-      rat.ai(:plain => true).should == "100510051005100510051005100510051005/1"
+      out = rat.ai(:plain => true)
+      #
+      # Ruby 1.9 slightly changed the format of Rational#to_s, see
+      # http://techtime.getharvest.com/blog/harvest-is-now-on-ruby-1-dot-9-3 and
+      # http://www.ruby-forum.com/topic/189397
+      #
+      if RUBY_VERSION < "1.9"
+        out.should == "100510051005100510051005100510051005"
+      else
+        out.should == "100510051005100510051005100510051005/1"
+      end
     end
   end
 
@@ -501,6 +512,51 @@ EOS
     end
   end
 
+  #------------------------------------------------------------------------------
+  describe "Set" do
+    before do
+      @arr = [1, :two, "three" ]
+      @set = Set.new(@arr)
+    end
+
+    it "empty set" do
+      Set.new.ai.should == [].ai
+    end
+
+    if RUBY_VERSION > "1.9"
+      it "plain multiline" do
+        @set.ai(:plain => true).should == @arr.ai(:plain => true)
+      end
+
+      it "plain multiline indented" do
+        @set.ai(:plain => true, :indent => 1).should == @arr.ai(:plain => true, :indent => 1)
+      end
+
+      it "plain single line" do
+        @set.ai(:plain => true, :multiline => false).should == @arr.ai(:plain => true, :multiline => false)
+      end
+
+      it "colored multiline (default)" do
+        @set.ai.should == @arr.ai
+      end
+    else # Prior to Ruby 1.9 the order of set values is unpredicatble.
+      it "plain multiline" do
+        @set.sort_by{ |x| x.to_s }.ai(:plain => true).should == @arr.sort_by{ |x| x.to_s }.ai(:plain => true)
+      end
+
+      it "plain multiline indented" do
+        @set.sort_by{ |x| x.to_s }.ai(:plain => true, :indent => 1).should == @arr.sort_by{ |x| x.to_s }.ai(:plain => true, :indent => 1)
+      end
+
+      it "plain single line" do
+        @set.sort_by{ |x| x.to_s }.ai(:plain => true, :multiline => false).should == @arr.sort_by{ |x| x.to_s }.ai(:plain => true, :multiline => false)
+      end
+
+      it "colored multiline (default)" do
+        @set.sort_by{ |x| x.to_s }.ai.should == @arr.sort_by{ |x| x.to_s }.ai
+      end
+    end
+  end
 
   #------------------------------------------------------------------------------
   describe "Struct" do
@@ -570,80 +626,6 @@ EOS
 }
 EOS
       @struct.ai.should satisfy { |match| match == s1 || match == s2 }
-    end
-  end
-
-
-  #------------------------------------------------------------------------------
-  describe "Misc" do
-    it "handle weird objects that return nil on inspect" do
-      weird = Class.new do
-        def inspect
-          nil
-        end
-      end
-      weird.new.ai(:plain => true).should == ''
-    end
-
-    it "handle frozen object.inspect" do
-      weird = Class.new do
-        def inspect
-          "ice".freeze
-        end
-      end
-      weird.new.ai(:plain => false).should == "ice"
-    end
-
-    # See https://github.com/michaeldv/awesome_print/issues/35
-    it "handle array grep when pattern contains / chapacter" do
-      hash = { "1/x" => 1,  "2//x" => :"2" }
-      grepped = hash.keys.grep(/^(\d+)\//) { $1 }
-      grepped.ai(:plain => true, :multiline => false).should == '[ "1", "2" ]'
-    end
-
-    it "returns value passed as a parameter" do
-      object = rand
-      self.stub!(:puts)
-      (ap object).should == object
-    end
-
-    # Require different file name this time (lib/ap.rb vs. lib/awesome_print).
-    it "several require 'awesome_print' should do no harm" do
-      require File.expand_path(File.dirname(__FILE__) + '/../lib/ap')
-      lambda { rand.ai }.should_not raise_error
-    end
-  end
-
-  describe "HTML output" do
-    it "wraps ap output with plain <pre> tag" do
-      markup = rand
-      markup.ai(:html => true, :plain => true).should == "<pre>#{markup}</pre>"
-    end
-
-    it "wraps ap output with <pre> tag with colorized <kbd>" do
-      markup = rand
-      markup.ai(:html => true).should == %Q|<pre><kbd style="color:blue">#{markup}</kbd></pre>|
-    end
-
-    it "wraps multiline ap output with <pre> tag with colorized <kbd>" do
-      markup = [ 1, :two, "three" ]
-      markup.ai(:html => true).should == <<-EOS.strip
-<pre>[
-    <kbd style="color:white">[0] </kbd><pre><kbd style="color:blue">1</kbd></pre>,
-    <kbd style="color:white">[1] </kbd><pre><kbd style="color:darkcyan">:two</kbd></pre>,
-    <kbd style="color:white">[2] </kbd><pre><kbd style="color:brown">&quot;three&quot;</kbd></pre>
-]</pre>
-EOS
-    end
-
-    it "encodes HTML entities (plain)" do
-      markup = ' &<hello>'
-      markup.ai(:html => true, :plain => true).should == '<pre>&quot; &amp;&lt;hello&gt;&quot;</pre>'
-    end
-
-    it "encodes HTML entities (color)" do
-      markup = ' &<hello>'
-      markup.ai(:html => true).should == '<pre><kbd style="color:brown">&quot; &amp;&lt;hello&gt;&quot;</kbd></pre>'
     end
   end
 
